@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/generative-ai-go/genai"
@@ -41,6 +42,7 @@ func (server *Server) getTextResponse(update tgbotapi.Update) {
 	id := update.FromChat().ID
 	if server.chats[id] == nil {
 		server.chats[id] = server.model.StartChat()
+		go server.chatDestruct(id, time.Hour*24)
 	}
 	prompt := server.populatePrompt(update.Message)
 	if len(prompt) < 1 {
@@ -59,6 +61,11 @@ func (server *Server) getTextResponse(update tgbotapi.Update) {
 	if _, err := server.bot.Send(msg); err != nil {
 		log.Fatal("Failed to send message:", err)
 	}
+}
+
+func (server *Server) chatDestruct(id int64, duration time.Duration) {
+	time.Sleep(duration)
+	delete(server.chats, id)
 }
 
 func (server *Server) populatePrompt(message *tgbotapi.Message) []genai.Part {
