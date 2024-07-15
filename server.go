@@ -46,7 +46,6 @@ func (server *Server) getTextResponse(update tgbotapi.Update) {
 	if len(prompt) < 1 {
 		return
 	}
-	fmt.Println(prompt)
 	response, err := server.chats[id].SendMessage(context.Background(), prompt...)
 	if err != nil {
 		msg := tgbotapi.NewMessage(update.FromChat().ID, "Sherstjanka did not like your message, try again")
