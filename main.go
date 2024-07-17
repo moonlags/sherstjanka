@@ -31,6 +31,12 @@ func main() {
 	model.SystemInstruction = &genai.Content{
 		Parts: []genai.Part{genai.Text(string(instructions))},
 	}
+	model.SafetySettings = []*genai.SafetySetting{
+		{
+			Category:  genai.HarmCategoryUnspecified,
+			Threshold: genai.HarmBlockOnlyHigh,
+		},
+	}
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("TOKEN"))
 	if err != nil {
 		log.Fatal("Error creating bot:", err)

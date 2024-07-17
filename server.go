@@ -50,7 +50,7 @@ func (server *Server) getTextResponse(update tgbotapi.Update) {
 	}
 	response, err := server.chats[id].SendMessage(context.Background(), prompt...)
 	if err != nil {
-		msg := tgbotapi.NewMessage(update.FromChat().ID, "Sherstjanka did not like your message, try again")
+		msg := tgbotapi.NewMessage(update.FromChat().ID, "Мне не нравится твое сообщение")
 		if _, err := server.bot.Send(msg); err != nil {
 			log.Fatal("Failed to send message:", err)
 		}
