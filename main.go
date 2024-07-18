@@ -33,7 +33,19 @@ func main() {
 	}
 	model.SafetySettings = []*genai.SafetySetting{
 		{
-			Category:  genai.HarmCategoryUnspecified,
+			Category:  genai.HarmCategorySexuallyExplicit,
+			Threshold: genai.HarmBlockOnlyHigh,
+		},
+		{
+			Category:  genai.HarmCategoryDangerousContent,
+			Threshold: genai.HarmBlockOnlyHigh,
+		},
+		{
+			Category:  genai.HarmCategoryHarassment,
+			Threshold: genai.HarmBlockOnlyHigh,
+		},
+		{
+			Category:  genai.HarmCategoryHateSpeech,
 			Threshold: genai.HarmBlockOnlyHigh,
 		},
 	}
