@@ -8,6 +8,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/generative-ai-go/genai"
 	"github.com/joho/godotenv"
+	"github.com/moonlags/sherstjanka/internal/photo"
 	"google.golang.org/api/option"
 )
 
@@ -36,6 +37,7 @@ func main() {
 		bot:    bot,
 		model:  model,
 		chats:  make(map[int64]*genai.ChatSession),
+		photos: make(chan *photo.Photo),
 	}
 
 	server.run()

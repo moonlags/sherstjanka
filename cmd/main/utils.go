@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/moonlags/sherstjanka/internal/flux"
+	"github.com/google/generative-ai-go/genai"
+	"github.com/moonlags/sherstjanka/internal/photo"
 )
 
 type modelResponse struct {
@@ -22,23 +24,52 @@ func parseReponse(response string) (*modelResponse, error) {
 	return parsed, nil
 }
 
-func (resp *modelResponse) telegramMessage(update tgbotapi.Update) (tgbotapi.Chattable, error) {
-	fmt.Printf("%#v", resp)
+func (resp *modelResponse) telegramMessage(update tgbotapi.Update, chat *genai.ChatSession, photos chan *photo.Photo) (tgbotapi.Chattable, error) {
+	fmt.Printf("%#v\n", resp)
 
 	if resp.ImagePrompt != "" {
 		fmt.Println(resp.ImagePrompt)
 
-		data, err := flux.GenerateImage(resp.ImagePrompt, true, nil)
-		if err != nil {
-			fmt.Println(err)
-			return tgbotapi.NewMessage(update.FromChat().ID, "Я не могу сейчас нарисовать картинку"), nil
-		}
-
-		msg := tgbotapi.NewPhoto(update.FromChat().ID, tgbotapi.FileBytes{Bytes: data})
-		msg.Caption = resp.Response
-
-		return msg, nil
+		photos <- &photo.Photo{MessageID: update.Message.MessageID, ChatID: update.FromChat().ID, Prompt: resp.ImagePrompt, ChatSession: chat}
 	}
 
-	return tgbotapi.NewMessage(update.FromChat().ID, resp.Response), nil
+	msg := tgbotapi.NewMessage(update.FromChat().ID, resp.Response)
+	msg.ReplyToMessageID = update.Message.MessageID
+
+	return msg, nil
+}
+
+func generationFailure(photo *photo.Photo) (tgbotapi.Chattable, error) {
+	resp, err := photo.ChatSession.SendMessage(context.Background(), genai.Text("ImageGenerationResponse: \""+photo.Prompt+"\" failed"))
+	if err != nil {
+		return nil, err
+	}
+
+	parsed, err := parseReponse(fmt.Sprint(resp.Candidates[0].Content.Parts[0]))
+	if err != nil {
+		return nil, err
+	}
+
+	msg := tgbotapi.NewMessage(photo.ChatID, parsed.Response)
+	msg.ReplyToMessageID = photo.MessageID
+
+	return msg, nil
+}
+
+func generationSuccess(photo *photo.Photo, data []byte) (tgbotapi.Chattable, error) {
+	resp, err := photo.ChatSession.SendMessage(context.Background(), genai.Text("ImageGenerationResponse: \""+photo.Prompt+"\" is ready"))
+	if err != nil {
+		return nil, err
+	}
+
+	parsed, err := parseReponse(fmt.Sprint(resp.Candidates[0].Content.Parts[0]))
+	if err != nil {
+		return nil, err
+	}
+
+	msg := tgbotapi.NewPhoto(photo.ChatID, tgbotapi.FileBytes{Bytes: data})
+	msg.ReplyToMessageID = photo.MessageID
+	msg.Caption = parsed.Response
+
+	return msg, nil
 }

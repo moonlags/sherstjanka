@@ -9,6 +9,7 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/generative-ai-go/genai"
+	"github.com/moonlags/sherstjanka/internal/photo"
 )
 
 type server struct {
@@ -16,9 +17,12 @@ type server struct {
 	bot    *tgbotapi.BotAPI
 	model  *genai.GenerativeModel
 	chats  map[int64]*genai.ChatSession
+	photos chan *photo.Photo
 }
 
 func (server *server) run() {
+	go server.imageHandler()
+
 	updates := server.bot.GetUpdatesChan(tgbotapi.NewUpdate(1))
 
 	for update := range updates {
@@ -55,7 +59,7 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 		log.Fatal("Failed to parse model response:", err)
 	}
 
-	msg, err := response.telegramMessage(update)
+	msg, err := response.telegramMessage(update, server.chats[id], server.photos)
 	if err != nil {
 		log.Fatal("Failed to construct telegram message:", err)
 	}
