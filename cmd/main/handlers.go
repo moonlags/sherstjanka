@@ -9,6 +9,8 @@ import (
 
 func (s *server) imageHandler() {
 	for photo := range s.photos {
+		fmt.Printf("generating image %#v\n", photo)
+
 		data, err := flux.GenerateImage(photo.Prompt, true, nil)
 		if err != nil {
 			fmt.Println(err)

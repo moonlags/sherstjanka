@@ -28,6 +28,22 @@ func (resp *modelResponse) telegramMessage(update tgbotapi.Update, chat *genai.C
 	fmt.Printf("%#v\n", resp)
 
 	if resp.ImagePrompt != "" {
+		if len(photos) >= 5 {
+			resp, err := chat.SendMessage(context.Background(), genai.Text("ImageGenerationResponse: queue is full"))
+			if err != nil {
+				return nil, err
+			}
+
+			parsed, err := parseReponse(fmt.Sprint(resp.Candidates[0].Content.Parts[0]))
+			if err != nil {
+				return nil, err
+			}
+
+			msg := tgbotapi.NewMessage(update.FromChat().ID, parsed.Response)
+			msg.ReplyToMessageID = update.Message.MessageID
+
+			return msg, nil
+		}
 		photos <- &photo.Photo{MessageID: update.Message.MessageID, ChatID: update.FromChat().ID, Prompt: resp.ImagePrompt, ChatSession: chat}
 	}
 

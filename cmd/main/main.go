@@ -37,7 +37,7 @@ func main() {
 		bot:    bot,
 		model:  model,
 		chats:  make(map[int64]*genai.ChatSession),
-		photos: make(chan *photo.Photo),
+		photos: make(chan *photo.Photo, 5),
 	}
 
 	server.run()
