@@ -15,7 +15,8 @@ func (s *server) imageHandler() {
 
 			msg, err := generationFailure(photo)
 			if err != nil {
-				log.Fatal("Failed to get model response to generation failure:", err)
+				fmt.Println("Failed to get model response to generation failure:", err)
+				continue
 			}
 
 			if _, err := s.bot.Send(msg); err != nil {
@@ -26,7 +27,8 @@ func (s *server) imageHandler() {
 
 		msg, err := generationSuccess(photo, data)
 		if err != nil {
-			log.Fatal("Failed to get model response to generation success:", err)
+			fmt.Println("Failed to get model response to generation success:", err)
+			continue
 		}
 
 		if _, err := s.bot.Send(msg); err != nil {

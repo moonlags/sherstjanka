@@ -28,8 +28,6 @@ func (resp *modelResponse) telegramMessage(update tgbotapi.Update, chat *genai.C
 	fmt.Printf("%#v\n", resp)
 
 	if resp.ImagePrompt != "" {
-		fmt.Println(resp.ImagePrompt)
-
 		photos <- &photo.Photo{MessageID: update.Message.MessageID, ChatID: update.FromChat().ID, Prompt: resp.ImagePrompt, ChatSession: chat}
 	}
 
