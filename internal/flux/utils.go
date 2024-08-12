@@ -35,6 +35,7 @@ func parseImageURL(r io.ReadCloser) (string, error) {
 	}
 
 	js = js[bytes.LastIndex(js, []byte("data"))+7 : len(js)-14]
+	js = bytes.TrimRight(js, ",")
 
 	var data struct {
 		URL string `json:"url"`

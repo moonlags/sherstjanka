@@ -16,26 +16,26 @@ type generationInfo struct {
 	NumInferenceSteps int
 }
 
-func GenerateImage(prompt string, randomiseSeed bool, opts *GenerationOptions) (string, error) {
+func GenerateImage(prompt string, randomiseSeed bool, opts *GenerationOptions) ([]byte, error) {
 	info := optsToInfo(prompt, randomiseSeed, opts)
 
 	eventID, err := info.getEventID()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	resp, err := http.Get("https://black-forest-labs-flux-1-schnell.hf.space/call/infer/" + eventID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	url, err := parseImageURL(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return url, nil
+	return getImageBytes(url)
 }
 
 func (info *generationInfo) json() *bytes.Reader {

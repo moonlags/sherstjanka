@@ -23,12 +23,12 @@ func parseReponse(response string) (*modelResponse, error) {
 
 func (resp *modelResponse) telegramMessage(update tgbotapi.Update) (tgbotapi.Chattable, error) {
 	if resp.ImagePrompt != "" {
-		url, err := flux.GenerateImage(resp.ImagePrompt, true, nil)
+		data, err := flux.GenerateImage(resp.ImagePrompt, true, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		msg := tgbotapi.NewPhoto(update.FromChat().ID, tgbotapi.FileURL(url))
+		msg := tgbotapi.NewPhoto(update.FromChat().ID, tgbotapi.FileBytes{Bytes: data})
 		msg.Caption = resp.Response
 
 		return msg, nil
