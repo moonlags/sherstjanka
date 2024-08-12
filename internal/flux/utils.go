@@ -30,12 +30,17 @@ func parseImageURL(r io.ReadCloser) (string, error) {
 		return "", err
 	}
 
-	if len(js) < 100 {
+	fmt.Println(string(js))
+
+	start := bytes.LastIndex(js, []byte("data")) + 7
+	end := len(js) - 14
+	if start > end {
 		return "", fmt.Errorf("bad request")
 	}
 
-	js = js[bytes.LastIndex(js, []byte("data"))+7 : len(js)-14]
-	js = bytes.TrimRight(js, ",")
+	js = bytes.TrimRight(js[start:end], ",")
+
+	fmt.Println(string(js))
 
 	var data struct {
 		URL string `json:"url"`

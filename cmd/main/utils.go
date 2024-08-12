@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/moonlags/sherstjanka/internal/flux"
@@ -22,10 +23,15 @@ func parseReponse(response string) (*modelResponse, error) {
 }
 
 func (resp *modelResponse) telegramMessage(update tgbotapi.Update) (tgbotapi.Chattable, error) {
+	fmt.Printf("%#v", resp)
+
 	if resp.ImagePrompt != "" {
+		fmt.Println(resp.ImagePrompt)
+
 		data, err := flux.GenerateImage(resp.ImagePrompt, true, nil)
 		if err != nil {
-			return nil, err
+			fmt.Println(err)
+			return tgbotapi.NewMessage(update.FromChat().ID, "Я не могу сейчас нарисовать картинку"), nil
 		}
 
 		msg := tgbotapi.NewPhoto(update.FromChat().ID, tgbotapi.FileBytes{Bytes: data})

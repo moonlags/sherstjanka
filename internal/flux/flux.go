@@ -24,6 +24,8 @@ func GenerateImage(prompt string, randomiseSeed bool, opts *GenerationOptions) (
 		return nil, err
 	}
 
+	fmt.Println(eventID)
+
 	resp, err := http.Get("https://black-forest-labs-flux-1-schnell.hf.space/call/infer/" + eventID)
 	if err != nil {
 		return nil, err

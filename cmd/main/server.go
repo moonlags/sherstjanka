@@ -19,7 +19,7 @@ type server struct {
 }
 
 func (server *server) run() {
-	updates := server.bot.GetUpdatesChan(tgbotapi.NewUpdate(0))
+	updates := server.bot.GetUpdatesChan(tgbotapi.NewUpdate(1))
 
 	for update := range updates {
 		if update.Message == nil {
