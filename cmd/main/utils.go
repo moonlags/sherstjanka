@@ -76,7 +76,12 @@ func generationFailure(photo *photo.Photo) (tgbotapi.Chattable, error) {
 func generationSuccess(photo *photo.Photo, url string) (tgbotapi.Chattable, error) {
 	resp, err := photo.ChatSession.SendMessage(context.Background(), genai.Text("ImageGenerationResponse: image is ready"))
 	if err != nil {
-		return nil, err
+		slog.Error("Can not get model response to generation success", "err", err)
+
+		msg := tgbotapi.NewPhoto(photo.ChatID, tgbotapi.FileURL(url))
+		msg.ReplyToMessageID = photo.MessageID
+
+		return msg, nil
 	}
 
 	parsed, err := parseReponse(fmt.Sprint(resp.Candidates[0].Content.Parts[0]))
