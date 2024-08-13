@@ -54,7 +54,7 @@ func (resp *modelResponse) telegramMessage(update tgbotapi.Update, chat *genai.C
 }
 
 func generationFailure(photo *photo.Photo) (tgbotapi.Chattable, error) {
-	resp, err := photo.ChatSession.SendMessage(context.Background(), genai.Text("ImageGenerationResponse: \""+photo.Prompt+"\" failed"))
+	resp, err := photo.ChatSession.SendMessage(context.Background(), genai.Text("ImageGenerationResponse: generation failed"))
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func generationFailure(photo *photo.Photo) (tgbotapi.Chattable, error) {
 }
 
 func generationSuccess(photo *photo.Photo, url string) (tgbotapi.Chattable, error) {
-	resp, err := photo.ChatSession.SendMessage(context.Background(), genai.Text("ImageGenerationResponse: \""+photo.Prompt+"\" is ready"))
+	resp, err := photo.ChatSession.SendMessage(context.Background(), genai.Text("ImageGenerationResponse: image is ready"))
 	if err != nil {
 		return nil, err
 	}
