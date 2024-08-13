@@ -70,7 +70,7 @@ func generationFailure(photo *photo.Photo) (tgbotapi.Chattable, error) {
 	return msg, nil
 }
 
-func generationSuccess(photo *photo.Photo, data []byte) (tgbotapi.Chattable, error) {
+func generationSuccess(photo *photo.Photo, url string) (tgbotapi.Chattable, error) {
 	resp, err := photo.ChatSession.SendMessage(context.Background(), genai.Text("ImageGenerationResponse: \""+photo.Prompt+"\" is ready"))
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func generationSuccess(photo *photo.Photo, data []byte) (tgbotapi.Chattable, err
 		return nil, err
 	}
 
-	msg := tgbotapi.NewPhoto(photo.ChatID, tgbotapi.FileBytes{Bytes: data})
+	msg := tgbotapi.NewPhoto(photo.ChatID, tgbotapi.FileURL(url))
 	msg.ReplyToMessageID = photo.MessageID
 	msg.Caption = parsed.Response
 

@@ -5,60 +5,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 )
 
-func optsToInfo(prompt string, randomiseSeed bool, opts *GenerationOptions) *generationInfo {
-	if opts == nil {
-		opts = new(GenerationOptions)
-		opts.populate()
-	}
+func promptToJson(prompt string) *bytes.Reader {
+	data := fmt.Sprintf("{\"prompt\":\"%s\"}", prompt)
 
-	return &generationInfo{
-		Prompt:            prompt,
-		RandomiseSeed:     randomiseSeed,
-		Seed:              opts.Seed,
-		Width:             opts.Width,
-		Height:            opts.Height,
-		NumInferenceSteps: opts.NumInferenceSteps,
-	}
+	return bytes.NewReader([]byte(data))
 }
 
 func parseImageURL(r io.ReadCloser) (string, error) {
-	js, err := io.ReadAll(r)
-	if err != nil {
+	var body struct {
+		Images []struct {
+			URL string `json:"url"`
+		} `json:"Images"`
+	}
+
+	if err := json.NewDecoder(r).Decode(&body); err != nil {
 		return "", err
 	}
 
-	fmt.Println(string(js))
-
-	start := bytes.LastIndex(js, []byte("data")) + 7
-	end := len(js) - 14
-	if start > end {
-		return "", fmt.Errorf("bad request")
-	}
-
-	js = bytes.TrimRight(js[start:end], ",")
-
-	fmt.Println(string(js))
-
-	var data struct {
-		URL string `json:"url"`
-	}
-
-	if err := json.Unmarshal(js, &data); err != nil {
-		return "", err
-	}
-
-	return data.URL, nil
-}
-
-func getImageBytes(url string) ([]byte, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	return io.ReadAll(resp.Body)
+	return body.Images[0].URL, nil
 }

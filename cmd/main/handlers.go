@@ -3,15 +3,18 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/moonlags/sherstjanka/internal/flux"
 )
 
 func (s *server) imageHandler() {
+	gen := flux.New(os.Getenv("FAL_KEY"))
+
 	for photo := range s.photos {
 		fmt.Printf("generating image %#v\n", photo)
 
-		data, err := flux.GenerateImage(photo.Prompt, true, nil)
+		url, err := gen.GenerateImage(photo.Prompt)
 		if err != nil {
 			fmt.Println(err)
 
@@ -27,7 +30,7 @@ func (s *server) imageHandler() {
 			continue
 		}
 
-		msg, err := generationSuccess(photo, data)
+		msg, err := generationSuccess(photo, url)
 		if err != nil {
 			fmt.Println("Failed to get model response to generation success:", err)
 			continue
