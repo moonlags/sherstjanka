@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -29,6 +30,8 @@ func (server *server) run() {
 		if update.Message == nil {
 			continue
 		}
+		slog.Info("Message recieved", "text", update.Message.Text, "firstname", update.Message.From.FirstName)
+
 		go server.getTextResponse(update)
 	}
 }
@@ -47,25 +50,31 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 
 	data, err := server.chats[id].SendMessage(context.Background(), prompt...)
 	if err != nil {
+		slog.Error("Can not get model response", "err", err)
+
 		msg := tgbotapi.NewMessage(update.FromChat().ID, "Мне не нравится твое сообщение")
 		if _, err := server.bot.Send(msg); err != nil {
-			log.Fatal("Failed to send message:", err)
+			slog.Error("Can not send message", "err", err)
+			os.Exit(1)
 		}
 		return
 	}
 
 	response, err := parseReponse(fmt.Sprint(data.Candidates[0].Content.Parts[0]))
 	if err != nil {
-		log.Fatal("Failed to parse model response:", err)
+		slog.Error("Can not parse model response", "err", err)
+		os.Exit(1)
 	}
 
 	msg, err := response.telegramMessage(update, server.chats[id], server.photos)
 	if err != nil {
-		log.Fatal("Failed to construct telegram message:", err)
+		slog.Error("Can not construct telegram message", "err", err)
+		os.Exit(1)
 	}
 
 	if _, err := server.bot.Send(msg); err != nil {
-		log.Fatal("Failed to send message:", err)
+		slog.Error("Can not send message", "err", err)
+		os.Exit(1)
 	}
 }
 
@@ -101,18 +110,21 @@ func (server *server) populatePrompt(message *tgbotapi.Message) []genai.Part {
 func (server *server) uploadAudio(fileID string, mimeType string) string {
 	url, err := server.bot.GetFileDirectURL(fileID)
 	if err != nil {
-		log.Fatal("Failed to get video url:", err)
+		slog.Error("Can not get audio url", "err", err)
+		os.Exit(1)
 	}
 
 	response, err := http.Get(url)
 	if err != nil {
-		log.Fatal("Failed to download media:", err)
+		slog.Error("Can not download audio", "err", err)
+		os.Exit(1)
 	}
 	defer response.Body.Close()
 
 	file, err := server.client.UploadFile(context.Background(), "", response.Body, &genai.UploadFileOptions{MIMEType: mimeType})
 	if err != nil {
-		log.Fatal("Failed to upload media:", err)
+		slog.Error("Can not upload audio", "err", err)
+		os.Exit(1)
 	}
 	return file.URI
 }
@@ -120,18 +132,21 @@ func (server *server) uploadAudio(fileID string, mimeType string) string {
 func (server *server) uploadMedia(fileID string) string {
 	url, err := server.bot.GetFileDirectURL(fileID)
 	if err != nil {
-		log.Fatal("Failed to get video url:", err)
+		slog.Error("Can not get media url", "err", err)
+		os.Exit(1)
 	}
 
 	response, err := http.Get(url)
 	if err != nil {
-		log.Fatal("Failed to download media:", err)
+		slog.Error("Can not download media", "err", err)
+		os.Exit(1)
 	}
 	defer response.Body.Close()
 
 	file, err := server.client.UploadFile(context.Background(), "", response.Body, nil)
 	if err != nil {
-		log.Fatal("Failed to upload media:", err)
+		slog.Error("Can not upload media", "err", err)
+		os.Exit(1)
 	}
 	return file.URI
 }

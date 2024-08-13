@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"os"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -13,6 +14,8 @@ import (
 )
 
 func init() {
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+
 	if err := godotenv.Load(); err != nil {
 		log.Fatal("Failed to load .env file:", err)
 	}
@@ -21,7 +24,8 @@ func init() {
 func main() {
 	client, err := genai.NewClient(context.Background(), option.WithAPIKey(os.Getenv("API_KEY")))
 	if err != nil {
-		log.Fatal("Failed to create gemini client:", err)
+		slog.Error("Can not create gemini client", "err", err)
+		os.Exit(1)
 	}
 	defer client.Close()
 
@@ -29,7 +33,8 @@ func main() {
 
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("TOKEN"))
 	if err != nil {
-		log.Fatal("Error creating bot:", err)
+		slog.Error("Can not create telegram bot", "err", err)
+		os.Exit(1)
 	}
 
 	server := server{

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/generative-ai-go/genai"
@@ -16,6 +17,8 @@ type modelResponse struct {
 }
 
 func parseReponse(response string) (*modelResponse, error) {
+	slog.Info("parsing response", "response", response)
+
 	parsed := new(modelResponse)
 	if err := json.Unmarshal([]byte(response), parsed); err != nil {
 		return nil, err
@@ -25,10 +28,10 @@ func parseReponse(response string) (*modelResponse, error) {
 }
 
 func (resp *modelResponse) telegramMessage(update tgbotapi.Update, chat *genai.ChatSession, photos chan *photo.Photo) (tgbotapi.Chattable, error) {
-	fmt.Printf("%#v\n", resp)
-
 	if resp.ImagePrompt != "" {
 		if len(photos) >= 5 {
+			slog.Info("Queue is full")
+
 			resp, err := chat.SendMessage(context.Background(), genai.Text("ImageGenerationResponse: queue is full"))
 			if err != nil {
 				return nil, err

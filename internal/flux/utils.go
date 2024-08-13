@@ -24,5 +24,9 @@ func parseImageURL(r io.ReadCloser) (string, error) {
 		return "", err
 	}
 
+	if len(body.Images) < 1 {
+		return "", fmt.Errorf("malformed data")
+	}
+
 	return body.Images[0].URL, nil
 }

@@ -17,7 +17,7 @@ func New(key string) *Config {
 
 func (c *Config) GenerateImage(prompt string) (string, error) {
 	client := http.Client{
-		Timeout: 5 * time.Second,
+		Timeout: 30 * time.Second,
 	}
 
 	req, err := http.NewRequest("POST", "https://fal.run/fal-ai/flux/schnell", promptToJson(prompt))

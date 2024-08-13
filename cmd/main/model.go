@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"os"
 
 	"github.com/google/generative-ai-go/genai"
@@ -10,7 +10,8 @@ import (
 func newModel(client *genai.Client) *genai.GenerativeModel {
 	instructions, err := os.ReadFile("instructions.txt")
 	if err != nil {
-		log.Fatal("Failed to read instructions from instructions.txt:", err)
+		slog.Error("Can not read instructions from instructions.txt", "err", err)
+		os.Exit(1)
 	}
 
 	model := client.GenerativeModel("gemini-1.5-flash")

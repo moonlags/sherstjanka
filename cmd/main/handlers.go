@@ -1,8 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"log"
+	"log/slog"
 	"os"
 
 	"github.com/moonlags/sherstjanka/internal/flux"
@@ -12,32 +11,34 @@ func (s *server) imageHandler() {
 	gen := flux.New(os.Getenv("FAL_KEY"))
 
 	for photo := range s.photos {
-		fmt.Printf("generating image %#v\n", photo)
+		slog.Info("generating image", "photo", photo)
 
 		url, err := gen.GenerateImage(photo.Prompt)
 		if err != nil {
-			fmt.Println(err)
+			slog.Error("Can not generate image", "err", err)
 
 			msg, err := generationFailure(photo)
 			if err != nil {
-				fmt.Println("Failed to get model response to generation failure:", err)
+				slog.Error("Can not get model response to generation failure", "err", err)
 				continue
 			}
 
 			if _, err := s.bot.Send(msg); err != nil {
-				log.Fatal("Failed to send a message:", err)
+				slog.Error("Can not send message", "err", err)
+				os.Exit(1)
 			}
 			continue
 		}
 
 		msg, err := generationSuccess(photo, url)
 		if err != nil {
-			fmt.Println("Failed to get model response to generation success:", err)
+			slog.Error("Can not get model response to generation success", "err", err)
 			continue
 		}
 
 		if _, err := s.bot.Send(msg); err != nil {
-			log.Fatal("Failed to send a message:", err)
+			slog.Error("Can not send message", "err", err)
+			os.Exit(1)
 		}
 	}
 }
