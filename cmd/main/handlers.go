@@ -25,7 +25,6 @@ func (s *server) imageHandler() {
 
 			if _, err := s.bot.Send(msg); err != nil {
 				slog.Error("Can not send message", "err", err)
-				os.Exit(1)
 			}
 			continue
 		}
@@ -38,7 +37,6 @@ func (s *server) imageHandler() {
 
 		if _, err := s.bot.Send(msg); err != nil {
 			slog.Error("Can not send message", "err", err)
-			os.Exit(1)
 		}
 	}
 }

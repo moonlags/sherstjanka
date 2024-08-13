@@ -74,7 +74,6 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 
 	if _, err := server.bot.Send(msg); err != nil {
 		slog.Error("Can not send message", "err", err)
-		os.Exit(1)
 	}
 }
 
