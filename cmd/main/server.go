@@ -63,7 +63,7 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 	response, err := parseReponse(fmt.Sprint(data.Candidates[0].Content.Parts[0]))
 	if err != nil {
 		slog.Error("Can not parse model response", "err", err)
-		os.Exit(1)
+		return
 	}
 
 	msg, err := response.telegramMessage(update, server.chats[id], server.photos)
