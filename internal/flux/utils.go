@@ -8,9 +8,14 @@ import (
 )
 
 func promptToJson(prompt string) *bytes.Reader {
-	data := fmt.Sprintf("{\"prompt\":\"%s\"}", prompt)
+	var data struct {
+		Prompt string `json:"prompt"`
+	}
+	data.Prompt = prompt
 
-	return bytes.NewReader([]byte(data))
+	js, _ := json.Marshal(data)
+
+	return bytes.NewReader(js)
 }
 
 func parseImageURL(r io.ReadCloser) (string, error) {
