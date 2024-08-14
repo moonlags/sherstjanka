@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -10,7 +9,7 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/generative-ai-go/genai"
-	"github.com/moonlags/sherstjanka/internal/photo"
+	"github.com/moonlags/sherstjanka/internal/flux"
 )
 
 type server struct {
@@ -18,12 +17,10 @@ type server struct {
 	bot    *tgbotapi.BotAPI
 	model  *genai.GenerativeModel
 	chats  map[int64]*genai.ChatSession
-	photos chan *photo.Photo
+	image  *flux.Config
 }
 
 func (server *server) run() {
-	go server.imageHandler()
-
 	updates := server.bot.GetUpdatesChan(tgbotapi.NewUpdate(1))
 
 	for update := range updates {
@@ -60,20 +57,17 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 		return
 	}
 
-	response, err := parseReponse(fmt.Sprint(data.Candidates[0].Content.Parts[0]))
-	if err != nil {
-		slog.Error("Can not parse model response", "err", err)
-		return
-	}
+	for _, part := range data.Candidates[0].Content.Parts {
+		msg, err := server.parseReponse(update, part)
+		if err != nil {
+			slog.Error("Can not parse model response", "err", err)
+			return
+		}
 
-	msg, err := response.telegramMessage(update, server.chats[id], server.photos)
-	if err != nil {
-		slog.Error("Can not construct telegram message", "err", err)
-		os.Exit(1)
-	}
-
-	if _, err := server.bot.Send(msg); err != nil {
-		slog.Error("Can not send message", "err", err)
+		if _, err := server.bot.Send(msg); err != nil {
+			slog.Error("Can not send message", "err", err)
+			os.Exit(1)
+		}
 	}
 }
 

@@ -14,22 +14,13 @@ func newModel(client *genai.Client) *genai.GenerativeModel {
 		os.Exit(1)
 	}
 
-	model := client.GenerativeModel("gemini-1.5-flash")
-
-	model.GenerationConfig = genai.GenerationConfig{
-		ResponseMIMEType: "application/json",
-		ResponseSchema: &genai.Schema{
-			Type: genai.TypeObject,
-			Properties: map[string]*genai.Schema{
-				"response":     {Type: genai.TypeString},
-				"image_prompt": {Type: genai.TypeString},
-			},
-		},
-	}
+	model := client.GenerativeModel("gemini-1.5-flash-latest")
 
 	model.SystemInstruction = &genai.Content{
 		Parts: []genai.Part{genai.Text(string(instructions))},
 	}
+
+	model.Tools = []*genai.Tool{imageGenerationTool()}
 
 	model.SafetySettings = []*genai.SafetySetting{
 		{
@@ -51,4 +42,23 @@ func newModel(client *genai.Client) *genai.GenerativeModel {
 	}
 
 	return model
+}
+
+func imageGenerationTool() *genai.Tool {
+	return &genai.Tool{
+		FunctionDeclarations: []*genai.FunctionDeclaration{{
+			Name:        "generateImage",
+			Description: "Generate image providing an image description",
+			Parameters: &genai.Schema{
+				Type: genai.TypeObject,
+				Properties: map[string]*genai.Schema{
+					"prompt": {
+						Type:        genai.TypeString,
+						Description: "Description of the image to generate",
+					},
+				},
+				Required: []string{"prompt"},
+			},
+		}},
+	}
 }

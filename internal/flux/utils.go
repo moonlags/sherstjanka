@@ -30,7 +30,7 @@ func parseImageURL(r io.ReadCloser) (string, error) {
 	}
 
 	if len(body.Images) < 1 {
-		return "", fmt.Errorf("malformed data")
+		return "", fmt.Errorf("bad request")
 	}
 
 	return body.Images[0].URL, nil

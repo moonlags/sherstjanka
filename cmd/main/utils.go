@@ -2,96 +2,104 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/generative-ai-go/genai"
-	"github.com/moonlags/sherstjanka/internal/photo"
 )
 
-type modelResponse struct {
-	Response    string `json:"response"`
-	ImagePrompt string `json:"image_prompt"`
-}
-
-func parseReponse(response string) (*modelResponse, error) {
+func (s *server) parseReponse(update tgbotapi.Update, response genai.Part) (tgbotapi.Chattable, error) {
 	slog.Info("parsing response", "response", response)
 
-	parsed := new(modelResponse)
-	if err := json.Unmarshal([]byte(response), parsed); err != nil {
+	funcall, ok := response.(genai.FunctionCall)
+	if !ok {
+		msg := tgbotapi.NewMessage(update.FromChat().ID, fmt.Sprint(response))
+		msg.ReplyToMessageID = update.Message.MessageID
+
+		return msg, nil
+	}
+
+	prompt, err := getPrompt(funcall)
+	if err != nil {
 		return nil, err
 	}
 
-	return parsed, nil
-}
+	slog.Info("generating image", "prompt", prompt)
 
-func (resp *modelResponse) telegramMessage(update tgbotapi.Update, chat *genai.ChatSession, photos chan *photo.Photo) (tgbotapi.Chattable, error) {
-	if resp.ImagePrompt != "" {
-		if len(photos) >= 5 {
-			slog.Info("Queue is full")
-
-			resp, err := chat.SendMessage(context.Background(), genai.Text("ImageGenerationResponse: queue is full"))
-			if err != nil {
-				return nil, err
-			}
-
-			parsed, err := parseReponse(fmt.Sprint(resp.Candidates[0].Content.Parts[0]))
-			if err != nil {
-				return nil, err
-			}
-
-			msg := tgbotapi.NewMessage(update.FromChat().ID, parsed.Response)
-			msg.ReplyToMessageID = update.Message.MessageID
-
-			return msg, nil
-		}
-		photos <- &photo.Photo{MessageID: update.Message.MessageID, ChatID: update.FromChat().ID, Prompt: resp.ImagePrompt, ChatSession: chat}
+	url, err := s.image.GenerateImage(prompt)
+	if err != nil {
+		slog.Error("Can not generate image:", "err", err)
+		return s.generationFailure(update, prompt, err)
 	}
 
-	msg := tgbotapi.NewMessage(update.FromChat().ID, resp.Response)
+	return s.generationSuccess(update, prompt, url)
+}
+
+func getPrompt(funcall genai.FunctionCall) (string, error) {
+	if funcall.Name != imageGenerationTool().FunctionDeclarations[0].Name {
+		return "", fmt.Errorf("unknown function call: %v", funcall.Name)
+	}
+
+	promptraw, ok := funcall.Args["prompt"]
+	if !ok {
+		return "", fmt.Errorf("argument prompt not found")
+	}
+
+	prompt, ok := promptraw.(string)
+	if !ok {
+		return "", fmt.Errorf("expected prompt type string got %T", promptraw)
+	}
+
+	return prompt, nil
+}
+
+func (s *server) generationFailure(update tgbotapi.Update, prompt string, err error) (tgbotapi.Chattable, error) {
+	apiResult := map[string]any{
+		"error":  err,
+		"prompt": prompt,
+	}
+
+	resp, err := s.chats[update.FromChat().ID].SendMessage(context.Background(), genai.FunctionResponse{
+		Name:     imageGenerationTool().FunctionDeclarations[0].Name,
+		Response: apiResult,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	parsed := fmt.Sprint(resp.Candidates[0].Content.Parts[0])
+
+	msg := tgbotapi.NewMessage(update.FromChat().ID, parsed)
 	msg.ReplyToMessageID = update.Message.MessageID
 
 	return msg, nil
 }
 
-func generationFailure(photo *photo.Photo) (tgbotapi.Chattable, error) {
-	resp, err := photo.ChatSession.SendMessage(context.Background(), genai.Text("ImageGenerationResponse: generation failed"))
-	if err != nil {
-		return nil, err
+func (s *server) generationSuccess(update tgbotapi.Update, prompt string, url string) (tgbotapi.Chattable, error) {
+	apiResult := map[string]any{
+		"message": "image is ready",
+		"prompt":  prompt,
 	}
 
-	parsed, err := parseReponse(fmt.Sprint(resp.Candidates[0].Content.Parts[0]))
-	if err != nil {
-		return nil, err
-	}
-
-	msg := tgbotapi.NewMessage(photo.ChatID, parsed.Response)
-	msg.ReplyToMessageID = photo.MessageID
-
-	return msg, nil
-}
-
-func generationSuccess(photo *photo.Photo, url string) (tgbotapi.Chattable, error) {
-	resp, err := photo.ChatSession.SendMessage(context.Background(), genai.Text("ImageGenerationResponse: image is ready"))
+	resp, err := s.chats[update.FromChat().ID].SendMessage(context.Background(), genai.FunctionResponse{
+		Name:     imageGenerationTool().FunctionDeclarations[0].Name,
+		Response: apiResult,
+	})
 	if err != nil {
 		slog.Error("Can not get model response to generation success", "err", err)
 
-		msg := tgbotapi.NewPhoto(photo.ChatID, tgbotapi.FileURL(url))
-		msg.ReplyToMessageID = photo.MessageID
+		msg := tgbotapi.NewPhoto(update.FromChat().ID, tgbotapi.FileURL(url))
+		msg.ReplyToMessageID = update.Message.MessageID
 
 		return msg, nil
 	}
 
-	parsed, err := parseReponse(fmt.Sprint(resp.Candidates[0].Content.Parts[0]))
-	if err != nil {
-		return nil, err
-	}
+	parsed := fmt.Sprint(resp.Candidates[0].Content.Parts[0])
 
-	msg := tgbotapi.NewPhoto(photo.ChatID, tgbotapi.FileURL(url))
-	msg.ReplyToMessageID = photo.MessageID
-	msg.Caption = parsed.Response
+	msg := tgbotapi.NewPhoto(update.FromChat().ID, tgbotapi.FileURL(url))
+	msg.ReplyToMessageID = update.Message.MessageID
+	msg.Caption = parsed
 
 	return msg, nil
 }
