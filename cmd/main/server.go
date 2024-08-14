@@ -13,11 +13,12 @@ import (
 )
 
 type server struct {
-	client *genai.Client
-	bot    *tgbotapi.BotAPI
-	model  *genai.GenerativeModel
-	chats  map[int64]*genai.ChatSession
-	image  *flux.Config
+	client    *genai.Client
+	bot       *tgbotapi.BotAPI
+	model     *genai.GenerativeModel
+	chats     map[int64]*genai.ChatSession
+	image     *flux.Config
+	whitelist int64
 }
 
 func (server *server) run() {
@@ -34,6 +35,11 @@ func (server *server) run() {
 }
 
 func (server *server) getTextResponse(update tgbotapi.Update) {
+	if !server.checkWhitelist(update) {
+		slog.Warn("user is not in whitelist", "firstname", update.Message.From.FirstName)
+		return
+	}
+
 	id := update.FromChat().ID
 	if server.chats[id] == nil {
 		server.chats[id] = server.model.StartChat()

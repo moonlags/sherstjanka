@@ -5,6 +5,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"strconv"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/generative-ai-go/genai"
@@ -37,12 +38,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	whitelist, err := strconv.ParseInt(os.Getenv("WHITELIST"), 10, 64)
+	if err != nil {
+		slog.Error("Can not get whilelist id", "err", err)
+		os.Exit(1)
+	}
+
 	server := server{
-		client: client,
-		bot:    bot,
-		model:  model,
-		chats:  make(map[int64]*genai.ChatSession),
-		image:  flux.New(os.Getenv("FAL_KEY")),
+		client:    client,
+		bot:       bot,
+		model:     model,
+		chats:     make(map[int64]*genai.ChatSession),
+		image:     flux.New(os.Getenv("FAL_KEY")),
+		whitelist: whitelist,
 	}
 
 	server.run()

@@ -36,6 +36,17 @@ func (s *server) parseReponse(update tgbotapi.Update, response genai.Part) (tgbo
 	return s.generationSuccess(update, prompt, url)
 }
 
+func (s *server) checkWhitelist(update tgbotapi.Update) bool {
+	_, err := s.bot.GetChatMember(tgbotapi.GetChatMemberConfig{
+		ChatConfigWithUser: tgbotapi.ChatConfigWithUser{
+			ChatID: s.whitelist,
+			UserID: update.Message.From.ID,
+		},
+	})
+
+	return err == nil
+}
+
 func getPrompt(funcall genai.FunctionCall) (string, error) {
 	if funcall.Name != imageGenerationTool().FunctionDeclarations[0].Name {
 		return "", fmt.Errorf("unknown function call: %v", funcall.Name)
