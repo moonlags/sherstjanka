@@ -4,10 +4,10 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/generative-ai-go/genai"
+	"github.com/moonlags/sherstjanka/internal/chats"
 	"github.com/moonlags/sherstjanka/internal/flux"
 )
 
@@ -15,7 +15,7 @@ type server struct {
 	client    *genai.Client
 	bot       *tgbotapi.BotAPI
 	model     *genai.GenerativeModel
-	chats     map[int64]*genai.ChatSession
+	chats     *chats.Chats
 	image     *flux.Config
 	whitelist int64
 }
@@ -40,9 +40,8 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 	}
 
 	id := update.FromChat().ID
-	if server.chats[id] == nil {
-		server.chats[id] = server.model.StartChat()
-		go server.chatDestruct(id, time.Hour*24)
+	if !server.chats.Exists(id) {
+		server.chats.NewChat(id, server.model)
 	}
 
 	prompt, err := server.populatePrompt(update.Message)
@@ -55,7 +54,7 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 		return
 	}
 
-	data, err := server.chats[id].SendMessage(context.Background(), prompt...)
+	parts, err := server.chats.Send(id, prompt...)
 	if err != nil {
 		slog.Error("Can not get model response", "err", err)
 
@@ -66,7 +65,7 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 		return
 	}
 
-	for _, part := range data.Candidates[0].Content.Parts {
+	for _, part := range parts {
 		msg, err := server.parseReponse(update, part)
 		if err != nil {
 			slog.Error("Can not parse model response", "err", err)
@@ -77,11 +76,6 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 			slog.Error("Can not send message", "err", err)
 		}
 	}
-}
-
-func (server *server) chatDestruct(id int64, duration time.Duration) {
-	time.Sleep(duration)
-	delete(server.chats, id)
 }
 
 func (server *server) populatePrompt(message *tgbotapi.Message) ([]genai.Part, error) {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 
@@ -71,7 +70,7 @@ func (s *server) generationFailure(update tgbotapi.Update, prompt string, err er
 		"prompt": prompt,
 	}
 
-	resp, err := s.chats[update.FromChat().ID].SendMessage(context.Background(), genai.FunctionResponse{
+	parts, err := s.chats.Send(update.FromChat().ID, genai.FunctionResponse{
 		Name:     imageGenerationTool().FunctionDeclarations[0].Name,
 		Response: apiResult,
 	})
@@ -79,7 +78,7 @@ func (s *server) generationFailure(update tgbotapi.Update, prompt string, err er
 		return nil, err
 	}
 
-	parsed := fmt.Sprint(resp.Candidates[0].Content.Parts[0])
+	parsed := fmt.Sprint(parts[0])
 
 	msg := tgbotapi.NewMessage(update.FromChat().ID, parsed)
 	msg.ReplyToMessageID = update.Message.MessageID
@@ -95,7 +94,7 @@ func (s *server) generationSuccess(update tgbotapi.Update, prompt string, url st
 		"prompt":  prompt,
 	}
 
-	resp, err := s.chats[update.FromChat().ID].SendMessage(context.Background(), genai.FunctionResponse{
+	parts, err := s.chats.Send(update.FromChat().ID, genai.FunctionResponse{
 		Name:     imageGenerationTool().FunctionDeclarations[0].Name,
 		Response: apiResult,
 	})
@@ -108,7 +107,7 @@ func (s *server) generationSuccess(update tgbotapi.Update, prompt string, url st
 		return msg, nil
 	}
 
-	parsed := fmt.Sprint(resp.Candidates[0].Content.Parts[0])
+	parsed := fmt.Sprint(parts[0])
 
 	msg := tgbotapi.NewPhoto(update.FromChat().ID, tgbotapi.FileURL(url))
 	msg.ReplyToMessageID = update.Message.MessageID

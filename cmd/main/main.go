@@ -10,6 +10,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/generative-ai-go/genai"
 	"github.com/joho/godotenv"
+	"github.com/moonlags/sherstjanka/internal/chats"
 	"github.com/moonlags/sherstjanka/internal/flux"
 	"google.golang.org/api/option"
 )
@@ -48,7 +49,7 @@ func main() {
 		client:    client,
 		bot:       bot,
 		model:     model,
-		chats:     make(map[int64]*genai.ChatSession),
+		chats:     chats.New(),
 		image:     flux.New(os.Getenv("FAL_KEY")),
 		whitelist: whitelist,
 	}
