@@ -88,6 +88,8 @@ func (s *server) generationFailure(update tgbotapi.Update, prompt string, err er
 }
 
 func (s *server) generationSuccess(update tgbotapi.Update, prompt string, url string) (tgbotapi.Chattable, error) {
+	slog.Info("generation success", "prompt", prompt, "url", url)
+
 	apiResult := map[string]any{
 		"message": "image is ready",
 		"prompt":  prompt,

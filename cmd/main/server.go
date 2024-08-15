@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"os"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -46,8 +45,9 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 		go server.chatDestruct(id, time.Hour*24)
 	}
 
-	prompt := server.populatePrompt(update.Message)
-	if len(prompt) < 1 {
+	prompt, err := server.populatePrompt(update.Message)
+	if err != nil {
+		slog.Error("Can not populate prompt", "err", err)
 		return
 	}
 
@@ -58,7 +58,6 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 		msg := tgbotapi.NewMessage(update.FromChat().ID, "Мне не нравится твое сообщение")
 		if _, err := server.bot.Send(msg); err != nil {
 			slog.Error("Can not send message", "err", err)
-			os.Exit(1)
 		}
 		return
 	}
@@ -72,7 +71,6 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 
 		if _, err := server.bot.Send(msg); err != nil {
 			slog.Error("Can not send message", "err", err)
-			os.Exit(1)
 		}
 	}
 }
@@ -82,70 +80,94 @@ func (server *server) chatDestruct(id int64, duration time.Duration) {
 	delete(server.chats, id)
 }
 
-func (server *server) populatePrompt(message *tgbotapi.Message) []genai.Part {
+func (server *server) populatePrompt(message *tgbotapi.Message) ([]genai.Part, error) {
 	prompt := make([]genai.Part, 0)
 	if message.Text != "" {
 		prompt = append(prompt, genai.Text(message.Text))
 	} else if message.Video != nil {
-		prompt = append(prompt, genai.FileData{URI: server.uploadMedia(message.Video.FileID)})
+		url, err := server.uploadMedia(message.Video.FileID)
+		if err != nil {
+			return nil, err
+		}
+
+		prompt = append(prompt, genai.FileData{URI: url})
 	} else if message.VideoNote != nil {
-		prompt = append(prompt, genai.FileData{URI: server.uploadMedia(message.VideoNote.FileID)})
+		url, err := server.uploadMedia(message.VideoNote.FileID)
+		if err != nil {
+			return nil, err
+		}
+
+		prompt = append(prompt, genai.FileData{URI: url})
 	} else if len(message.Photo) > 0 {
-		prompt = append(prompt, genai.FileData{URI: server.uploadMedia(message.Photo[0].FileID)})
+		url, err := server.uploadMedia(message.Photo[0].FileID)
+		if err != nil {
+			return nil, err
+		}
+
+		prompt = append(prompt, genai.FileData{URI: url})
 	} else if message.Sticker != nil {
-		prompt = append(prompt, genai.FileData{URI: server.uploadMedia(message.Sticker.Thumbnail.FileID)})
+		url, err := server.uploadMedia(message.Sticker.Thumbnail.FileID)
+		if err != nil {
+			return nil, err
+		}
+
+		prompt = append(prompt, genai.FileData{URI: url})
 	} else if message.Audio != nil {
-		prompt = append(prompt, genai.FileData{URI: server.uploadAudio(message.Audio.FileID, message.Audio.MimeType)})
+		url, err := server.uploadAudio(message.Audio.FileID, message.Audio.MimeType)
+		if err != nil {
+			return nil, err
+		}
+
+		prompt = append(prompt, genai.FileData{URI: url})
 	} else if message.Voice != nil {
-		prompt = append(prompt, genai.FileData{URI: server.uploadAudio(message.Voice.FileID, message.Voice.MimeType)})
+		url, err := server.uploadAudio(message.Voice.FileID, message.Voice.MimeType)
+		if err != nil {
+			return nil, err
+		}
+
+		prompt = append(prompt, genai.FileData{URI: url})
 	}
 
 	if message.Caption != "" {
 		prompt = append(prompt, genai.Text(message.Caption))
 	}
-	return prompt
+	return prompt, nil
 }
 
-func (server *server) uploadAudio(fileID string, mimeType string) string {
+func (server *server) uploadAudio(fileID string, mimeType string) (string, error) {
 	url, err := server.bot.GetFileDirectURL(fileID)
 	if err != nil {
-		slog.Error("Can not get audio url", "err", err)
-		os.Exit(1)
+		return "", err
 	}
 
 	response, err := http.Get(url)
 	if err != nil {
-		slog.Error("Can not download audio", "err", err)
-		os.Exit(1)
+		return "", err
 	}
 	defer response.Body.Close()
 
 	file, err := server.client.UploadFile(context.Background(), "", response.Body, &genai.UploadFileOptions{MIMEType: mimeType})
 	if err != nil {
-		slog.Error("Can not upload audio", "err", err)
-		os.Exit(1)
+		return "", err
 	}
-	return file.URI
+	return file.URI, nil
 }
 
-func (server *server) uploadMedia(fileID string) string {
+func (server *server) uploadMedia(fileID string) (string, error) {
 	url, err := server.bot.GetFileDirectURL(fileID)
 	if err != nil {
-		slog.Error("Can not get media url", "err", err)
-		os.Exit(1)
+		return "", err
 	}
 
 	response, err := http.Get(url)
 	if err != nil {
-		slog.Error("Can not download media", "err", err)
-		os.Exit(1)
+		return "", err
 	}
 	defer response.Body.Close()
 
 	file, err := server.client.UploadFile(context.Background(), "", response.Body, nil)
 	if err != nil {
-		slog.Error("Can not upload media", "err", err)
-		os.Exit(1)
+		return "", err
 	}
-	return file.URI
+	return file.URI, nil
 }
