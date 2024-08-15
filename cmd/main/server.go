@@ -51,6 +51,10 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 		return
 	}
 
+	if len(prompt) < 1 {
+		return
+	}
+
 	data, err := server.chats[id].SendMessage(context.Background(), prompt...)
 	if err != nil {
 		slog.Error("Can not get model response", "err", err)
