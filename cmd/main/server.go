@@ -58,7 +58,7 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
 	parts, err := server.chats.Send(ctx, id, prompt...)
@@ -151,7 +151,7 @@ func (server *server) uploadAudio(fileID string, mimeType string) (string, error
 	}
 	defer response.Body.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
 	file, err := server.client.UploadFile(ctx, "", response.Body, &genai.UploadFileOptions{MIMEType: mimeType})
@@ -173,7 +173,7 @@ func (server *server) uploadMedia(fileID string) (string, error) {
 	}
 	defer response.Body.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
 	file, err := server.client.UploadFile(ctx, "", response.Body, nil)

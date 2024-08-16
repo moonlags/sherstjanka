@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 )
 
 func promptToJson(prompt string) *bytes.Reader {
@@ -34,4 +35,14 @@ func parseImageURL(r io.ReadCloser) (string, error) {
 	}
 
 	return body.Images[0].URL, nil
+}
+
+func getImageBytes(url string) ([]byte, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return io.ReadAll(resp.Body)
 }

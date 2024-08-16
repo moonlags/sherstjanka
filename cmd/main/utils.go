@@ -28,16 +28,16 @@ func (s *server) parseReponse(update tgbotapi.Update, response genai.Part) (tgbo
 
 	slog.Info("generating image", "prompt", prompt)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	url, err := s.image.GenerateImage(prompt)
+	image, err := s.image.GenerateImage(prompt)
 	if err != nil {
 		slog.Error("Can not generate image:", "err", err)
 		return s.generationFailure(ctx, update, prompt, err)
 	}
 
-	return s.generationSuccess(ctx, update, prompt, url)
+	return s.generationSuccess(ctx, update, prompt, image)
 }
 
 func (s *server) checkWhitelist(update tgbotapi.Update) bool {
@@ -93,22 +93,22 @@ func (s *server) generationFailure(ctx context.Context, update tgbotapi.Update, 
 	return msg, nil
 }
 
-func (s *server) generationSuccess(ctx context.Context, update tgbotapi.Update, prompt string, url string) (tgbotapi.Chattable, error) {
-	slog.Info("generation success", "prompt", prompt, "url", url)
+func (s *server) generationSuccess(ctx context.Context, update tgbotapi.Update, prompt string, image []byte) (tgbotapi.Chattable, error) {
+	slog.Info("generation success", "prompt", prompt)
 
 	apiResult := map[string]any{
 		"message": "image is ready",
 		"prompt":  prompt,
 	}
 
-	parts, err := s.chats.Send(ctx, update.FromChat().ID, genai.FunctionResponse{
+	parts, err := s.chats.Send(ctx, update.FromChat().ID, genai.ImageData("png", image), genai.FunctionResponse{
 		Name:     imageGenerationTool().FunctionDeclarations[0].Name,
 		Response: apiResult,
 	})
 	if err != nil {
 		slog.Error("Can not get model response to generation success", "err", err)
 
-		msg := tgbotapi.NewPhoto(update.FromChat().ID, tgbotapi.FileURL(url))
+		msg := tgbotapi.NewPhoto(update.FromChat().ID, tgbotapi.FileBytes{Bytes: image})
 		msg.ReplyToMessageID = update.Message.MessageID
 
 		return msg, nil
@@ -118,7 +118,7 @@ func (s *server) generationSuccess(ctx context.Context, update tgbotapi.Update, 
 
 	slog.Info("Model response to generation success", "parts", parts)
 
-	msg := tgbotapi.NewPhoto(update.FromChat().ID, tgbotapi.FileURL(url))
+	msg := tgbotapi.NewPhoto(update.FromChat().ID, tgbotapi.FileBytes{Bytes: image})
 	msg.ReplyToMessageID = update.Message.MessageID
 	msg.Caption = parsed
 

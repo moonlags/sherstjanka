@@ -2,7 +2,6 @@ package flux
 
 import (
 	"net/http"
-	"time"
 )
 
 type Config struct {
@@ -15,29 +14,25 @@ func New(key string) *Config {
 	}
 }
 
-func (c *Config) GenerateImage(prompt string) (string, error) {
-	client := http.Client{
-		Timeout: 30 * time.Second,
-	}
-
+func (c *Config) GenerateImage(prompt string) ([]byte, error) {
 	req, err := http.NewRequest("POST", "https://fal.run/fal-ai/flux/schnell", promptToJson(prompt))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Key "+c.ApiKey)
 
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	url, err := parseImageURL(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return url, nil
+	return getImageBytes(url)
 }
