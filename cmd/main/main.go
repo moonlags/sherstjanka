@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/generative-ai-go/genai"
@@ -24,7 +25,10 @@ func init() {
 }
 
 func main() {
-	client, err := genai.NewClient(context.Background(), option.WithAPIKey(os.Getenv("API_KEY")))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	client, err := genai.NewClient(ctx, option.WithAPIKey(os.Getenv("API_KEY")))
 	if err != nil {
 		slog.Error("Can not create gemini client", "err", err)
 		os.Exit(1)

@@ -44,11 +44,11 @@ func (c *Chats) chatDestruct(id int64, dur time.Duration) {
 	delete(c.chats, id)
 }
 
-func (c *Chats) Send(id int64, parts ...genai.Part) ([]genai.Part, error) {
+func (c *Chats) Send(ctx context.Context, id int64, parts ...genai.Part) ([]genai.Part, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	resp, err := c.chats[id].SendMessage(context.Background(), parts...)
+	resp, err := c.chats[id].SendMessage(ctx, parts...)
 	if err != nil {
 		return nil, err
 	}

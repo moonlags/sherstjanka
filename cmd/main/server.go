@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/generative-ai-go/genai"
@@ -21,7 +22,10 @@ type server struct {
 }
 
 func (server *server) run() {
-	updates := server.bot.GetUpdatesChan(tgbotapi.NewUpdate(1))
+	u := tgbotapi.NewUpdate(-1)
+	u.Timeout = 60
+
+	updates := server.bot.GetUpdatesChan(u)
 
 	for update := range updates {
 		if update.Message == nil {
@@ -54,7 +58,10 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 		return
 	}
 
-	parts, err := server.chats.Send(id, prompt...)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	parts, err := server.chats.Send(ctx, id, prompt...)
 	if err != nil {
 		slog.Error("Can not get model response", "err", err)
 
@@ -144,7 +151,10 @@ func (server *server) uploadAudio(fileID string, mimeType string) (string, error
 	}
 	defer response.Body.Close()
 
-	file, err := server.client.UploadFile(context.Background(), "", response.Body, &genai.UploadFileOptions{MIMEType: mimeType})
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	file, err := server.client.UploadFile(ctx, "", response.Body, &genai.UploadFileOptions{MIMEType: mimeType})
 	if err != nil {
 		return "", err
 	}
@@ -163,7 +173,10 @@ func (server *server) uploadMedia(fileID string) (string, error) {
 	}
 	defer response.Body.Close()
 
-	file, err := server.client.UploadFile(context.Background(), "", response.Body, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	file, err := server.client.UploadFile(ctx, "", response.Body, nil)
 	if err != nil {
 		return "", err
 	}

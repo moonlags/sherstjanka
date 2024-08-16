@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/generative-ai-go/genai"
@@ -26,13 +28,16 @@ func (s *server) parseReponse(update tgbotapi.Update, response genai.Part) (tgbo
 
 	slog.Info("generating image", "prompt", prompt)
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
 	url, err := s.image.GenerateImage(prompt)
 	if err != nil {
 		slog.Error("Can not generate image:", "err", err)
-		return s.generationFailure(update, prompt, err)
+		return s.generationFailure(ctx, update, prompt, err)
 	}
 
-	return s.generationSuccess(update, prompt, url)
+	return s.generationSuccess(ctx, update, prompt, url)
 }
 
 func (s *server) checkWhitelist(update tgbotapi.Update) bool {
@@ -64,13 +69,13 @@ func getPrompt(funcall genai.FunctionCall) (string, error) {
 	return prompt, nil
 }
 
-func (s *server) generationFailure(update tgbotapi.Update, prompt string, err error) (tgbotapi.Chattable, error) {
+func (s *server) generationFailure(ctx context.Context, update tgbotapi.Update, prompt string, err error) (tgbotapi.Chattable, error) {
 	apiResult := map[string]any{
 		"error":  err,
 		"prompt": prompt,
 	}
 
-	parts, err := s.chats.Send(update.FromChat().ID, genai.FunctionResponse{
+	parts, err := s.chats.Send(ctx, update.FromChat().ID, genai.FunctionResponse{
 		Name:     imageGenerationTool().FunctionDeclarations[0].Name,
 		Response: apiResult,
 	})
@@ -86,7 +91,7 @@ func (s *server) generationFailure(update tgbotapi.Update, prompt string, err er
 	return msg, nil
 }
 
-func (s *server) generationSuccess(update tgbotapi.Update, prompt string, url string) (tgbotapi.Chattable, error) {
+func (s *server) generationSuccess(ctx context.Context, update tgbotapi.Update, prompt string, url string) (tgbotapi.Chattable, error) {
 	slog.Info("generation success", "prompt", prompt, "url", url)
 
 	apiResult := map[string]any{
@@ -94,7 +99,7 @@ func (s *server) generationSuccess(update tgbotapi.Update, prompt string, url st
 		"prompt":  prompt,
 	}
 
-	parts, err := s.chats.Send(update.FromChat().ID, genai.FunctionResponse{
+	parts, err := s.chats.Send(ctx, update.FromChat().ID, genai.FunctionResponse{
 		Name:     imageGenerationTool().FunctionDeclarations[0].Name,
 		Response: apiResult,
 	})
