@@ -20,7 +20,7 @@ func newModel(client *genai.Client) *genai.GenerativeModel {
 		Parts: []genai.Part{genai.Text(string(instructions))},
 	}
 
-	model.Tools = []*genai.Tool{imageGenerationTool()}
+	model.Tools = []*genai.Tool{modelTools()}
 
 	model.SafetySettings = []*genai.SafetySetting{
 		{
@@ -42,23 +42,4 @@ func newModel(client *genai.Client) *genai.GenerativeModel {
 	}
 
 	return model
-}
-
-func imageGenerationTool() *genai.Tool {
-	return &genai.Tool{
-		FunctionDeclarations: []*genai.FunctionDeclaration{{
-			Name:        "generateImage",
-			Description: "Generate image providing an image description",
-			Parameters: &genai.Schema{
-				Type: genai.TypeObject,
-				Properties: map[string]*genai.Schema{
-					"prompt": {
-						Type:        genai.TypeString,
-						Description: "Description of the image to generate",
-					},
-				},
-				Required: []string{"prompt"},
-			},
-		}},
-	}
 }

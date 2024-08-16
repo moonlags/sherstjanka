@@ -8,36 +8,19 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/generative-ai-go/genai"
+	"github.com/moonlags/sherstjanka/internal/openweathermap"
 )
 
-func (s *server) parseReponse(update tgbotapi.Update, response genai.Part) (tgbotapi.Chattable, error) {
+func (s *server) parseReponse(update tgbotapi.Update, response genai.Part) string {
 	slog.Info("parsing response", "response", response)
 
 	funcall, ok := response.(genai.FunctionCall)
 	if !ok {
-		msg := tgbotapi.NewMessage(update.FromChat().ID, fmt.Sprint(response))
-		msg.ReplyToMessageID = update.Message.MessageID
-
-		return msg, nil
+		return fmt.Sprint(response)
 	}
 
-	prompt, err := getPrompt(funcall)
-	if err != nil {
-		return nil, err
-	}
-
-	slog.Info("generating image", "prompt", prompt)
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-
-	image, err := s.image.GenerateImage(prompt)
-	if err != nil {
-		slog.Error("Can not generate image:", "err", err)
-		return s.generationFailure(ctx, update, prompt, err)
-	}
-
-	return s.generationSuccess(ctx, update, prompt, image)
+	s.parseFuncall(update, funcall)
+	return ""
 }
 
 func (s *server) checkWhitelist(update tgbotapi.Update) bool {
@@ -51,58 +34,162 @@ func (s *server) checkWhitelist(update tgbotapi.Update) bool {
 	return err == nil
 }
 
-func getPrompt(funcall genai.FunctionCall) (string, error) {
-	if funcall.Name != imageGenerationTool().FunctionDeclarations[0].Name {
-		return "", fmt.Errorf("unknown function call: %v", funcall.Name)
-	}
+func (s *server) parseFuncall(update tgbotapi.Update, funcall genai.FunctionCall) {
+	switch funcall.Name {
+	case modelTools().FunctionDeclarations[0].Name:
+		prompt, err := getImageGenerationPrompt(funcall)
+		if err != nil {
+			slog.Error("Can not get image generation prompt")
+			return
+		}
 
-	promptraw, ok := funcall.Args["prompt"]
-	if !ok {
-		return "", fmt.Errorf("argument prompt not found")
-	}
+		slog.Info("generating image", "prompt", prompt)
 
-	prompt, ok := promptraw.(string)
-	if !ok {
-		return "", fmt.Errorf("expected prompt type string got %T", promptraw)
-	}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
 
-	return prompt, nil
+		image, err := s.image.GenerateImage(prompt)
+		if err != nil {
+			slog.Error("Can not generate image:", "err", err)
+			s.generationFailure(ctx, update, prompt, err)
+		}
+
+		s.generationSuccess(ctx, update, prompt, image)
+	case modelTools().FunctionDeclarations[1].Name:
+		city, err := getWeatherCity(funcall)
+		if err != nil {
+			slog.Error("Can not get city for weather", "err", err)
+			return
+		}
+
+		slog.Info("Getting weather", "city", city)
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
+		weather, err := s.weather.Weather(city)
+		if err != nil {
+			slog.Error("Can not get weather", "city", city, "err", err)
+			s.weatherFail(ctx, update, city, err)
+		}
+
+		s.weatherSuccess(ctx, update, city, weather)
+	default:
+		slog.Error("Unknown function call", "name", funcall.Name)
+	}
 }
 
-func (s *server) generationFailure(ctx context.Context, update tgbotapi.Update, prompt string, err error) (tgbotapi.Chattable, error) {
+func (s *server) weatherFail(ctx context.Context, update tgbotapi.Update, city string, err error) {
+	apiResult := map[string]any{
+		"city":  city,
+		"error": err,
+	}
+
+	parts, err := s.chats.Send(ctx, update.FromChat().ID, genai.FunctionResponse{
+		Name:     modelTools().FunctionDeclarations[1].Name,
+		Response: apiResult,
+	})
+	if err != nil {
+		slog.Error("Can not get model response", "err", err)
+		return
+	}
+
+	slog.Warn("Model response to weather fail", "parts", parts)
+
+	for _, part := range parts {
+		response := s.parseReponse(update, part)
+
+		if response == "" {
+			continue
+		}
+
+		msg := tgbotapi.NewMessage(update.FromChat().ID, response)
+		msg.ReplyToMessageID = update.Message.MessageID
+
+		if _, err := s.bot.Send(msg); err != nil {
+			slog.Error("Can not send message", "err", err)
+		}
+	}
+}
+
+func (s *server) generationFailure(ctx context.Context, update tgbotapi.Update, prompt string, err error) {
 	apiResult := map[string]any{
 		"error":  err,
 		"prompt": prompt,
 	}
 
 	parts, err := s.chats.Send(ctx, update.FromChat().ID, genai.FunctionResponse{
-		Name:     imageGenerationTool().FunctionDeclarations[0].Name,
+		Name:     modelTools().FunctionDeclarations[0].Name,
 		Response: apiResult,
 	})
 	if err != nil {
-		return nil, err
+		slog.Error("Can not get model response", "err", err)
+		return
 	}
-
-	parsed := fmt.Sprint(parts[0])
 
 	slog.Warn("Model response to generation failure", "parts", parts)
 
-	msg := tgbotapi.NewMessage(update.FromChat().ID, parsed)
-	msg.ReplyToMessageID = update.Message.MessageID
+	for _, part := range parts {
+		response := s.parseReponse(update, part)
 
-	return msg, nil
+		if response == "" {
+			continue
+		}
+
+		msg := tgbotapi.NewMessage(update.FromChat().ID, response)
+		msg.ReplyToMessageID = update.Message.MessageID
+
+		if _, err := s.bot.Send(msg); err != nil {
+			slog.Error("Can not send message", "err", err)
+		}
+	}
 }
 
-func (s *server) generationSuccess(ctx context.Context, update tgbotapi.Update, prompt string, image []byte) (tgbotapi.Chattable, error) {
-	slog.Info("generation success", "prompt", prompt)
+func (s *server) weatherSuccess(ctx context.Context, update tgbotapi.Update, city string, weather *openweathermap.Response) {
+	slog.Info("weather success", "city", city, "weather", weather)
 
 	apiResult := map[string]any{
-		"message": "image is ready",
-		"prompt":  prompt,
+		"city":        city,
+		"temperature": weather.Main.Temp,
+		"description": weather.Weather[0].Description,
+		"wind":        weather.Wind.Speed,
+	}
+
+	parts, err := s.chats.Send(ctx, update.FromChat().ID, genai.FunctionResponse{
+		Name:     modelTools().FunctionDeclarations[1].Name,
+		Response: apiResult,
+	})
+	if err != nil {
+		slog.Error("Can not get model response to weather success", "err", err)
+		return
+	}
+
+	slog.Info("Model response to weather success", "parts", parts)
+
+	for _, part := range parts {
+		response := s.parseReponse(update, part)
+
+		if response == "" {
+			continue
+		}
+
+		msg := tgbotapi.NewMessage(update.FromChat().ID, response)
+		msg.ReplyToMessageID = update.Message.MessageID
+
+		if _, err := s.bot.Send(msg); err != nil {
+			slog.Error("Can not send message", "err", err)
+		}
+	}
+}
+
+func (s *server) generationSuccess(ctx context.Context, update tgbotapi.Update, prompt string, image []byte) {
+	apiResult := map[string]any{
+		"image":  "image is ready",
+		"prompt": prompt,
 	}
 
 	parts, err := s.chats.Send(ctx, update.FromChat().ID, genai.ImageData("png", image), genai.FunctionResponse{
-		Name:     imageGenerationTool().FunctionDeclarations[0].Name,
+		Name:     modelTools().FunctionDeclarations[0].Name,
 		Response: apiResult,
 	})
 	if err != nil {
@@ -111,16 +198,27 @@ func (s *server) generationSuccess(ctx context.Context, update tgbotapi.Update, 
 		msg := tgbotapi.NewPhoto(update.FromChat().ID, tgbotapi.FileBytes{Bytes: image})
 		msg.ReplyToMessageID = update.Message.MessageID
 
-		return msg, nil
+		if _, err := s.bot.Send(msg); err != nil {
+			slog.Error("Can not send message", "err", err)
+			return
+		}
 	}
-
-	parsed := fmt.Sprint(parts[0])
 
 	slog.Info("Model response to generation success", "parts", parts)
 
-	msg := tgbotapi.NewPhoto(update.FromChat().ID, tgbotapi.FileBytes{Bytes: image})
-	msg.ReplyToMessageID = update.Message.MessageID
-	msg.Caption = parsed
+	for _, part := range parts {
+		response := s.parseReponse(update, part)
 
-	return msg, nil
+		if response == "" {
+			continue
+		}
+
+		msg := tgbotapi.NewPhoto(update.FromChat().ID, tgbotapi.FileBytes{Bytes: image})
+		msg.ReplyToMessageID = update.Message.MessageID
+		msg.Caption = response
+
+		if _, err := s.bot.Send(msg); err != nil {
+			slog.Error("Can not send message", "err", err)
+		}
+	}
 }

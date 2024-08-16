@@ -13,6 +13,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/moonlags/sherstjanka/internal/chats"
 	"github.com/moonlags/sherstjanka/internal/flux"
+	"github.com/moonlags/sherstjanka/internal/openweathermap"
 	"google.golang.org/api/option"
 )
 
@@ -55,6 +56,7 @@ func main() {
 		model:     model,
 		chats:     chats.New(),
 		image:     flux.New(os.Getenv("FAL_KEY")),
+		weather:   openweathermap.New(os.Getenv("OWM_KEY")),
 		whitelist: whitelist,
 	}
 

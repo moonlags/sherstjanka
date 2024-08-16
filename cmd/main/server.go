@@ -10,6 +10,7 @@ import (
 	"github.com/google/generative-ai-go/genai"
 	"github.com/moonlags/sherstjanka/internal/chats"
 	"github.com/moonlags/sherstjanka/internal/flux"
+	"github.com/moonlags/sherstjanka/internal/openweathermap"
 )
 
 type server struct {
@@ -18,6 +19,7 @@ type server struct {
 	model     *genai.GenerativeModel
 	chats     *chats.Chats
 	image     *flux.Config
+	weather   *openweathermap.Config
 	whitelist int64
 }
 
@@ -73,11 +75,14 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 	}
 
 	for _, part := range parts {
-		msg, err := server.parseReponse(update, part)
-		if err != nil {
-			slog.Error("Can not parse model response", "err", err)
-			return
+		response := server.parseReponse(update, part)
+
+		if response == "" {
+			continue
 		}
+
+		msg := tgbotapi.NewMessage(update.FromChat().ID, response)
+		msg.ReplyToMessageID = update.Message.MessageID
 
 		if _, err := server.bot.Send(msg); err != nil {
 			slog.Error("Can not send message", "err", err)
