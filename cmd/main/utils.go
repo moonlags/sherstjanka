@@ -85,6 +85,8 @@ func (s *server) generationFailure(ctx context.Context, update tgbotapi.Update, 
 
 	parsed := fmt.Sprint(parts[0])
 
+	slog.Warn("Model response to generation failure", "parts", parts)
+
 	msg := tgbotapi.NewMessage(update.FromChat().ID, parsed)
 	msg.ReplyToMessageID = update.Message.MessageID
 
@@ -113,6 +115,8 @@ func (s *server) generationSuccess(ctx context.Context, update tgbotapi.Update, 
 	}
 
 	parsed := fmt.Sprint(parts[0])
+
+	slog.Info("Model response to generation success", "parts", parts)
 
 	msg := tgbotapi.NewPhoto(update.FromChat().ID, tgbotapi.FileURL(url))
 	msg.ReplyToMessageID = update.Message.MessageID
