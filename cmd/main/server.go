@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -93,7 +94,8 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 func (server *server) populatePrompt(message *tgbotapi.Message) ([]genai.Part, error) {
 	prompt := make([]genai.Part, 0)
 	if message.Text != "" {
-		prompt = append(prompt, genai.Text(message.Text))
+		text := fmt.Sprintf("%s: %s", message.From.FirstName, message.Text)
+		prompt = append(prompt, genai.Text(text))
 	} else if message.Video != nil {
 		url, err := server.uploadMedia(message.Video.FileID)
 		if err != nil {
@@ -139,7 +141,8 @@ func (server *server) populatePrompt(message *tgbotapi.Message) ([]genai.Part, e
 	}
 
 	if message.Caption != "" {
-		prompt = append(prompt, genai.Text(message.Caption))
+		text := fmt.Sprintf("%s: %s", message.From.FirstName, message.Caption)
+		prompt = append(prompt, genai.Text(text))
 	}
 	return prompt, nil
 }
