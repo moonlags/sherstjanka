@@ -15,7 +15,6 @@ func newModel(client *genai.Client) *genai.GenerativeModel {
 	}
 
 	model := client.GenerativeModel("gemini-1.5-flash-latest")
-	model.SetTemperature(2.0)
 
 	model.SystemInstruction = &genai.Content{
 		Parts: []genai.Part{genai.Text(string(instructions))},
