@@ -9,13 +9,13 @@ import (
 )
 
 type Chats struct {
-	chats map[int64]*genai.ChatSession
+	chats map[int64]*Chat
 	mu    sync.RWMutex
 }
 
 func New() *Chats {
 	return &Chats{
-		chats: make(map[int64]*genai.ChatSession),
+		chats: make(map[int64]*Chat),
 	}
 }
 
@@ -23,7 +23,7 @@ func (c *Chats) NewChat(id int64, model *genai.GenerativeModel) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.chats[id] = model.StartChat()
+	c.chats[id] = NewChat(model)
 	go c.chatDestruct(id, 24*time.Hour)
 }
 
@@ -48,7 +48,7 @@ func (c *Chats) Send(ctx context.Context, id int64, parts ...genai.Part) ([]gena
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	resp, err := c.chats[id].SendMessage(ctx, parts...)
+	resp, err := c.chats[id].SendAsync(ctx, parts...)
 	if err != nil {
 		return nil, err
 	}
