@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"log/slog"
 	"os"
@@ -18,7 +19,15 @@ import (
 )
 
 func init() {
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+	if flag.Lookup("v") != nil {
+		file, err := os.Create("logs.txt")
+		if err != nil {
+			log.Fatal("Failed to create log file:", err)
+		}
+		slog.SetDefault(slog.New(slog.NewTextHandler(file, nil)))
+	} else {
+		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+	}
 
 	if err := godotenv.Load(); err != nil {
 		log.Fatal("Failed to load .env file:", err)

@@ -51,6 +51,13 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 		server.chats.NewChat(id, server.model)
 	}
 
+	if update.Message.Text == "/reset" {
+		slog.Info("reseting chat", "chat_id", update.FromChat().ID)
+
+		server.chats.Remove(update.FromChat().ID)
+		return
+	}
+
 	prompt, err := server.populatePrompt(update.Message)
 	if err != nil {
 		slog.Error("Can not populate prompt", "err", err)

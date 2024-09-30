@@ -3,7 +3,6 @@ package chats
 import (
 	"context"
 	"sync"
-	"time"
 
 	"github.com/google/generative-ai-go/genai"
 )
@@ -24,7 +23,10 @@ func (c *Chats) NewChat(id int64, model *genai.GenerativeModel) {
 	defer c.mu.Unlock()
 
 	c.chats[id] = NewChat(model)
-	go c.chatDestruct(id, 24*time.Hour)
+}
+
+func (c *Chats) Remove(id int64) {
+	delete(c.chats, id)
 }
 
 func (c *Chats) Exists(id int64) bool {
@@ -33,15 +35,6 @@ func (c *Chats) Exists(id int64) bool {
 
 	_, ok := c.chats[id]
 	return ok
-}
-
-func (c *Chats) chatDestruct(id int64, dur time.Duration) {
-	time.Sleep(dur)
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	delete(c.chats, id)
 }
 
 func (c *Chats) Send(ctx context.Context, id int64, parts ...genai.Part) ([]genai.Part, error) {

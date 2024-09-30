@@ -1,5 +1,4 @@
 .env
 instructions.txt
-go.sum
 bin
 logs.log
