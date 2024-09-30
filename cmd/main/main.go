@@ -19,7 +19,10 @@ import (
 )
 
 func init() {
-	if flag.Lookup("v") != nil {
+	fileLog := flag.Bool("v", false, "log to a file")
+	flag.Parse()
+
+	if *fileLog {
 		file, err := os.Create("logs.txt")
 		if err != nil {
 			log.Fatal("Failed to create log file:", err)
