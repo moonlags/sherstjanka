@@ -26,7 +26,7 @@ type server struct {
 
 func (server *server) run() {
 	u := tgbotapi.NewUpdate(-1)
-	u.Timeout = 60
+	u.Timeout = 30
 
 	updates := server.bot.GetUpdatesChan(u)
 
@@ -54,6 +54,11 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 	if update.Message.Text == "/reset" {
 		slog.Info("reseting chat", "chat_id", update.FromChat().ID)
 
+		msg := tgbotapi.NewMessage(update.FromChat().ID, "Ой, я все забыла")
+		if _, err := server.bot.Send(msg); err != nil {
+			slog.Error("Can not send message", "err", err)
+		}
+
 		server.chats.Remove(update.FromChat().ID)
 		return
 	}
@@ -68,7 +73,7 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
 	parts, err := server.chats.Send(ctx, id, prompt...)
@@ -166,7 +171,7 @@ func (server *server) uploadAudio(fileID string, mimeType string) (string, error
 	}
 	defer response.Body.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
 	file, err := server.client.UploadFile(ctx, "", response.Body, &genai.UploadFileOptions{MIMEType: mimeType})
@@ -188,7 +193,7 @@ func (server *server) uploadMedia(fileID string) (string, error) {
 	}
 	defer response.Body.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
 	file, err := server.client.UploadFile(ctx, "", response.Body, nil)

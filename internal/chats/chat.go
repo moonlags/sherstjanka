@@ -20,6 +20,7 @@ func NewChat(model *genai.GenerativeModel) *Chat {
 
 func (c *Chat) SendAsync(ctx context.Context, parts ...genai.Part) (*genai.GenerateContentResponse, error) {
 	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	resp, err := c.SendMessage(ctx, parts...)
 	if err != nil {

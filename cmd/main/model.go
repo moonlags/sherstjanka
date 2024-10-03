@@ -10,8 +10,7 @@ import (
 func newModel(client *genai.Client) *genai.GenerativeModel {
 	instructions, err := os.ReadFile("instructions.txt")
 	if err != nil {
-		slog.Error("Can not read instructions from instructions.txt", "err", err)
-		os.Exit(1)
+		slog.Warn("Can not read instructions from instructions.txt", "err", err)
 	}
 
 	model := client.GenerativeModel("gemini-1.5-flash-latest")
