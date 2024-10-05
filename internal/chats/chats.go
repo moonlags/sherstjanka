@@ -26,6 +26,9 @@ func (c *Chats) NewChat(id int64, model *genai.GenerativeModel) {
 }
 
 func (c *Chats) Remove(id int64) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	delete(c.chats, id)
 }
 
