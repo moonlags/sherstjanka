@@ -45,7 +45,7 @@ func (s *server) parseFuncall(update tgbotapi.Update, funcall genai.FunctionCall
 
 		slog.Info("generating image", "prompt", prompt)
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
 
 		image, err := s.image.GenerateImage(prompt)
@@ -64,7 +64,7 @@ func (s *server) parseFuncall(update tgbotapi.Update, funcall genai.FunctionCall
 
 		slog.Info("Getting weather", "city", city)
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
 
 		weather, err := s.weather.Weather(city)
