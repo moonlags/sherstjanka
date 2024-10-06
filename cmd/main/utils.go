@@ -31,7 +31,7 @@ func (s *server) checkWhitelist(update tgbotapi.Update) bool {
 		},
 	})
 
-	return user.IsMember
+	return user.Status == "creator" || user.Status == "member"
 }
 
 func (s *server) parseFuncall(update tgbotapi.Update, funcall genai.FunctionCall) {
