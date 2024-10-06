@@ -24,14 +24,14 @@ func (s *server) parseReponse(update tgbotapi.Update, response genai.Part) strin
 }
 
 func (s *server) checkWhitelist(update tgbotapi.Update) bool {
-	_, err := s.bot.GetChatMember(tgbotapi.GetChatMemberConfig{
+	user, _ := s.bot.GetChatMember(tgbotapi.GetChatMemberConfig{
 		ChatConfigWithUser: tgbotapi.ChatConfigWithUser{
 			ChatID: s.whitelist,
 			UserID: update.Message.From.ID,
 		},
 	})
 
-	return err == nil
+	return user.IsMember
 }
 
 func (s *server) parseFuncall(update tgbotapi.Update, funcall genai.FunctionCall) {

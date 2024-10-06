@@ -43,6 +43,11 @@ func (server *server) run() {
 func (server *server) getTextResponse(update tgbotapi.Update) {
 	if !server.checkWhitelist(update) {
 		slog.Warn("user is not in whitelist", "firstname", update.Message.From.FirstName)
+
+		msg := tgbotapi.NewMessage(update.FromChat().ID, "Обратитесь к администратору (@ridxj) для доступа к Шерстянке")
+		if _, err := server.bot.Send(msg); err != nil {
+			slog.Error("Can not send message", "err", err)
+		}
 		return
 	}
 
