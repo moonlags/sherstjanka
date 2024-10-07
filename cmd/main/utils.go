@@ -189,7 +189,7 @@ func (s *server) generationSuccess(ctx context.Context, update tgbotapi.Update, 
 		"prompt": prompt,
 	}
 
-	parts, err := s.chats.Send(ctx, update.FromChat().ID, genai.ImageData("png", image), genai.FunctionResponse{
+	parts, err := s.chats.Send(ctx, update.FromChat().ID, genai.FunctionResponse{
 		Name:     modelTools().FunctionDeclarations[0].Name,
 		Response: apiResult,
 	})
