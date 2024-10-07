@@ -27,9 +27,9 @@ func init() {
 		if err != nil {
 			log.Fatal("Failed to create log file:", err)
 		}
-		slog.SetDefault(slog.New(slog.NewTextHandler(file, nil)))
+		slog.SetDefault(slog.New(slog.NewTextHandler(file, &slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug})))
 	} else {
-		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug})))
 	}
 
 	if err := godotenv.Load(); err != nil {
