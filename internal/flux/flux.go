@@ -1,6 +1,7 @@
 package flux
 
 import (
+	"log/slog"
 	"net/http"
 )
 
@@ -15,6 +16,8 @@ func New(key string) *Config {
 }
 
 func (c *Config) GenerateImage(prompt string) ([]byte, error) {
+	slog.Debug("generating image", "prompt", prompt)
+
 	req, err := http.NewRequest("POST", "https://fal.run/fal-ai/flux/schnell", promptToJson(prompt))
 	if err != nil {
 		return nil, err

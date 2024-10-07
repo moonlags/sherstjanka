@@ -34,7 +34,7 @@ func (server *server) run() {
 		if update.Message == nil {
 			continue
 		}
-		slog.Info("Message recieved", "text", update.Message.Text, "firstname", update.Message.From.FirstName)
+		slog.Debug("message recieved", "text", update.Message.Text, "user", update.Message.From)
 
 		go server.getTextResponse(update)
 	}
@@ -42,7 +42,7 @@ func (server *server) run() {
 
 func (server *server) getTextResponse(update tgbotapi.Update) {
 	if !server.checkWhitelist(update) {
-		slog.Warn("user is not in whitelist", "firstname", update.Message.From.FirstName)
+		slog.Warn("user is not in whitelist", "user", update.Message.From)
 
 		msg := tgbotapi.NewMessage(update.FromChat().ID, "Обратитесь к администратору (@ridxj) для доступа к Шерстянке")
 		if _, err := server.bot.Send(msg); err != nil {
@@ -91,6 +91,8 @@ func (server *server) getTextResponse(update tgbotapi.Update) {
 		}
 		return
 	}
+
+	slog.Debug("model response", "parts", parts)
 
 	for _, part := range parts {
 		response := server.parseReponse(update, part)

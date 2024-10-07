@@ -12,7 +12,7 @@ import (
 )
 
 func (s *server) parseReponse(update tgbotapi.Update, response genai.Part) string {
-	slog.Info("parsing response", "response", response)
+	slog.Debug("parsing response", "response", response)
 
 	funcall, ok := response.(genai.FunctionCall)
 	if !ok {
@@ -42,8 +42,6 @@ func (s *server) parseFuncall(update tgbotapi.Update, funcall genai.FunctionCall
 			slog.Error("Can not get image generation prompt")
 			return
 		}
-
-		slog.Info("generating image", "prompt", prompt)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
@@ -80,6 +78,7 @@ func (s *server) parseFuncall(update tgbotapi.Update, funcall genai.FunctionCall
 }
 
 func (s *server) weatherFail(ctx context.Context, update tgbotapi.Update, city string, err error) {
+	slog.Warn("failed to get weather", "city", city, "err", err)
 	apiResult := map[string]any{
 		"city":  city,
 		"error": err,
@@ -113,6 +112,7 @@ func (s *server) weatherFail(ctx context.Context, update tgbotapi.Update, city s
 }
 
 func (s *server) generationFailure(ctx context.Context, update tgbotapi.Update, prompt string, err error) {
+	slog.Warn("failed to generate image", "prompt", prompt, "err", err)
 	apiResult := map[string]any{
 		"error":  err,
 		"prompt": prompt,
@@ -146,7 +146,7 @@ func (s *server) generationFailure(ctx context.Context, update tgbotapi.Update, 
 }
 
 func (s *server) weatherSuccess(ctx context.Context, update tgbotapi.Update, city string, weather *openweathermap.Response) {
-	slog.Info("weather success", "city", city, "weather", weather)
+	slog.Debug("weather success", "city", city, "weather", weather)
 
 	apiResult := map[string]any{
 		"city":        city,
@@ -164,7 +164,7 @@ func (s *server) weatherSuccess(ctx context.Context, update tgbotapi.Update, cit
 		return
 	}
 
-	slog.Info("Model response to weather success", "parts", parts)
+	slog.Debug("Model response to weather success", "parts", parts)
 
 	for _, part := range parts {
 		response := s.parseReponse(update, part)
@@ -183,6 +183,7 @@ func (s *server) weatherSuccess(ctx context.Context, update tgbotapi.Update, cit
 }
 
 func (s *server) generationSuccess(ctx context.Context, update tgbotapi.Update, prompt string, image []byte) {
+	slog.Debug("generation success", "prompt", prompt)
 	apiResult := map[string]any{
 		"image":  "image is ready",
 		"prompt": prompt,
@@ -204,7 +205,7 @@ func (s *server) generationSuccess(ctx context.Context, update tgbotapi.Update, 
 		}
 	}
 
-	slog.Info("Model response to generation success", "parts", parts)
+	slog.Debug("Model response to generation success", "parts", parts)
 
 	for _, part := range parts {
 		response := s.parseReponse(update, part)

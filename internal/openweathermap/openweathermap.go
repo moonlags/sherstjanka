@@ -3,6 +3,7 @@ package openweathermap
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 )
 
@@ -30,6 +31,7 @@ type Response struct {
 }
 
 func (cfg *Config) Weather(city string) (*Response, error) {
+	slog.Debug("getting weather", "city", city)
 	url := fmt.Sprintf("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s&units=metric", city, cfg.ApiKey)
 
 	resp, err := http.Get(url)
@@ -42,6 +44,8 @@ func (cfg *Config) Weather(city string) (*Response, error) {
 	if err := json.NewDecoder(resp.Body).Decode(weather); err != nil {
 		return nil, err
 	}
+
+	slog.Debug("weather http reponse", "body", weather)
 
 	if weather.Message != "" {
 		return nil, fmt.Errorf("error from openweathermap: %v", err)

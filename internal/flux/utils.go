@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 )
 
@@ -29,6 +30,8 @@ func parseImageURL(r io.ReadCloser) (string, error) {
 	if err := json.NewDecoder(r).Decode(&body); err != nil {
 		return "", err
 	}
+
+	slog.Debug("decode http body", "body", body)
 
 	if len(body.Images) < 1 {
 		return "", fmt.Errorf("bad request")

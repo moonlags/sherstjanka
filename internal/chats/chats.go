@@ -2,6 +2,7 @@ package chats
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 
 	"github.com/google/generative-ai-go/genai"
@@ -23,6 +24,8 @@ func (c *Chats) NewChat(id int64, model *genai.GenerativeModel) {
 	defer c.mu.Unlock()
 
 	c.chats[id] = NewChat(model)
+
+	slog.Debug("created new chat", "id", id)
 }
 
 func (c *Chats) Remove(id int64) {
@@ -43,6 +46,8 @@ func (c *Chats) Exists(id int64) bool {
 func (c *Chats) Send(ctx context.Context, id int64, parts ...genai.Part) ([]genai.Part, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+
+	slog.Debug("sending message to AI", "id", id, "parts", parts)
 
 	resp, err := c.chats[id].SendAsync(ctx, parts...)
 	if err != nil {
